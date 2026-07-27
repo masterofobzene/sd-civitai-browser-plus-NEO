@@ -41,20 +41,20 @@ def contenttype_folder(content_type, desc=None, fromCheck=False, custom_folder=N
         folder = os.path.join(main_models)
         
     if content_type == "Checkpoint":
-        if cmd_opts.ckpt_dir and not custom_folder:
-            folder = cmd_opts.ckpt_dir
+        if hasattr(cmd_opts, 'ckpt_dirs') and cmd_opts.ckpt_dirs and not custom_folder:
+            folder = cmd_opts.ckpt_dirs[0]
         else:
             folder = os.path.join(main_models,"Stable-diffusion")
             
     elif content_type == "Hypernetwork":
-        if cmd_opts.hypernetwork_dir and not custom_folder:
-            folder = cmd_opts.hypernetwork_dir
+        if getattr(cmd_opts, 'hypernetwork_dir', None) and not custom_folder:
+            folder = getattr(cmd_opts, 'hypernetwork_dir', None)
         else:
             folder = os.path.join(main_models, "hypernetworks")
         
     elif content_type == "TextualInversion":
-        if cmd_opts.embeddings_dir and not custom_folder:
-            folder = cmd_opts.embeddings_dir
+        if getattr(cmd_opts, 'embeddings_dir', None) and not custom_folder:
+            folder = getattr(cmd_opts, 'embeddings_dir', None)
         else:
             folder = os.path.join(main_data, "embeddings")
         
@@ -65,28 +65,28 @@ def contenttype_folder(content_type, desc=None, fromCheck=False, custom_folder=N
             folder = os.path.join(custom_folder, "aesthetic_embeddings")
             
     elif content_type == "LORA":
-        if cmd_opts.lora_dir and not custom_folder:
-            folder = cmd_opts.lora_dir
+        if getattr(cmd_opts, 'lora_dir', None) and not custom_folder:
+            folder = getattr(cmd_opts, 'lora_dir', None)
         else:
             folder = folder = os.path.join(main_models, "Lora")
         
     elif content_type == "LoCon":
         folder = os.path.join(main_models, "LyCORIS")
         if use_LORA and not fromCheck:
-            if cmd_opts.lora_dir and not custom_folder:
-                folder = cmd_opts.lora_dir
+            if getattr(cmd_opts, 'lora_dir', None) and not custom_folder:
+                folder = getattr(cmd_opts, 'lora_dir', None)
             else:
                 folder = folder = os.path.join(main_models, "Lora")
 
     elif content_type == "DoRA":
-        if cmd_opts.lora_dir and not custom_folder:
-            folder = cmd_opts.lora_dir
+        if getattr(cmd_opts, 'lora_dir', None) and not custom_folder:
+            folder = getattr(cmd_opts, 'lora_dir', None)
         else:
             folder = folder = os.path.join(main_models, "Lora")
             
     elif content_type == "VAE":
-        if cmd_opts.vae_dir and not custom_folder:
-            folder = cmd_opts.vae_dir
+        if getattr(cmd_opts, 'vae_dir', None) and not custom_folder:
+            folder = getattr(cmd_opts, 'vae_dir', None)
         else:
             folder = os.path.join(main_models, "VAE")
             
@@ -101,28 +101,28 @@ def contenttype_folder(content_type, desc=None, fromCheck=False, custom_folder=N
     
     elif content_type == "Upscaler":
         if "SWINIR" in desc:
-            if cmd_opts.swinir_models_path and not custom_folder:
-                folder = cmd_opts.swinir_models_path
+            if getattr(cmd_opts, 'swinir_models_path', None) and not custom_folder:
+                folder = getattr(cmd_opts, 'swinir_models_path', None)
             else:
                 folder = os.path.join(main_models, "SwinIR")
         elif "REALESRGAN" in desc:
-            if cmd_opts.realesrgan_models_path and not custom_folder:
-                folder = cmd_opts.realesrgan_models_path
+            if getattr(cmd_opts, 'realesrgan_models_path', None) and not custom_folder:
+                folder = getattr(cmd_opts, 'realesrgan_models_path', None)
             else:
                 folder = os.path.join(main_models, "RealESRGAN")
         elif "GFPGAN" in desc:
-            if cmd_opts.gfpgan_models_path and not custom_folder:
-                folder = cmd_opts.gfpgan_models_path
+            if getattr(cmd_opts, 'gfpgan_models_path', None) and not custom_folder:
+                folder = getattr(cmd_opts, 'gfpgan_models_path', None)
             else:
                 folder = os.path.join(main_models, "GFPGAN")
         elif "BSRGAN" in desc:
-            if cmd_opts.bsrgan_models_path and not custom_folder:
-                folder = cmd_opts.bsrgan_models_path
+            if getattr(cmd_opts, 'bsrgan_models_path', None) and not custom_folder:
+                folder = getattr(cmd_opts, 'bsrgan_models_path', None)
             else:
                 folder = os.path.join(main_models, "BSRGAN")
         else:
-            if cmd_opts.esrgan_models_path and not custom_folder:
-                folder = cmd_opts.esrgan_models_path
+            if getattr(cmd_opts, 'esrgan_models_path', None) and not custom_folder:
+                folder = getattr(cmd_opts, 'esrgan_models_path', None)
             else:
                 folder = os.path.join(main_models, "ESRGAN")
             
