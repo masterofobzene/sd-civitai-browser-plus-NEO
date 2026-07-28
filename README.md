@@ -1,7 +1,7 @@
 ### Extension for [Automatic1111's Stable Diffusion Web UI on Forge Neo](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
 
 <h1>Features 🚀</h1>
-<h3>Browse all models from CivitAI 🧩</h3>
+<h3>Browse all models from CivitAI ${\color{red}RED}$🔴</h3>
 
 * Explore a wide range of models at your fingertips.
 
@@ -31,10 +31,6 @@
 <h3>Sleek and Intuitive User Interface 🖌️</h3>
 
 * Enjoy a clutter-free, user-friendly interface, designed to enhance your experience.
-
-<h3>Actively maintained with feature requests welcome 🛠️</h3>
-
-* Feel free to send me your feature requests, and I'll do my best to implement them!
 
 <h1></h1>
 
