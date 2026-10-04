@@ -1,4 +1,4 @@
-### Extension for [Automatic1111's Stable Diffusion Web UI on Forge Neo](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
+### Extension for [Forge Neo](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
 
 <h1>Features 🚀</h1>
 <h3>Browse all models from CivitAI ${\color{red}RED}$🔴</h3>
