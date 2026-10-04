@@ -811,3 +811,37 @@
 }
 /*-----------------------------------------*/
 /*End CSS accordion for toggling extra metadata*/
+
+/* Override dark-theme text inside the popup */
+#civitai_preview_html .civitai-overlay-inner,
+#civitai_preview_html {
+    background: #ffffff;
+    color: #111111;
+}
+#civitai_preview_html dt { color: #3966bb !important; }
+#civitai_preview_html dd,
+#civitai_preview_html p,
+#civitai_preview_html a,
+#civitai_preview_html .model-uploader,
+#civitai_preview_html .model-description,
+#civitai_preview_html .tab-label,
+#civitai_preview_html .description-toggle-label {
+    color: #111111;
+}
+#civitai_preview_html .civitai-tag,
+#civitai_preview_html .civitai-meta,
+#civitai_preview_html .civitai-meta-btn {
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    color: #111111;
+}
+#civitai_preview_html .model-description::after {
+    background: linear-gradient(to bottom, rgb(255 255 255 / 0%), #ffffff);
+}
+
+.civitai-overlay-inner,
+.civitai-overlay-inner * {
+    color: #111111;
+}
+.civitai-overlay-inner a { color: #1d4ed8; }
+.civitai-overlay-inner a:hover { color: #1e40af; }
