@@ -420,7 +420,24 @@ function createCivitAICardButtons() {
                 buttonRow.addEventListener('click', function(event) {
                     event.stopPropagation();
                 });
-                
+                const copyPathBtn = cardDiv.querySelector('.copy-path-button');
+				if (copyPathBtn && !copyPathBtn.dataset.civitaiPatched) {
+					copyPathBtn.dataset.civitaiPatched = "1";
+				
+					// Capture phase: stop card reload, but let A1111's own handler still fire.
+					copyPathBtn.addEventListener('click', (e) => {
+						e.stopPropagation();
+						setTimeout(async () => {
+							try {
+								const text = await navigator.clipboard.readText();
+								const folder = text.replace(/[\\/][^\\/]*$/, '');
+								if (folder && folder !== text) {
+									await navigator.clipboard.writeText(folder);
+								}
+							} catch (_) { /* clipboard read blocked, fall through to Fix B */ }
+						}, 0);
+					}, true);
+				}
                 if (!buttonRow.querySelector('.goto-civitbrowser.card-button')) {
                     const modelName = cardDiv.querySelector('.actions .name')?.textContent.trim();
                     if (!modelName) return;
@@ -457,6 +474,31 @@ function createSVGIcon(fontSize) {
     `;
 
     return svgIcon;
+}
+
+// Re-scan the extra-networks folder whenever the user switches tabs.
+function setupExtraTabRefresh() {
+    ['txt2img', 'img2img'].forEach(prefix => {
+        const container = document.getElementById(`${prefix}_extra_tabs`);
+        if (!container || container.dataset.civitaiAutoRefresh) return;
+        container.dataset.civitaiAutoRefresh = "1";
+
+        container.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+
+            // Don't re-fire when the user clicks the refresh button itself.
+            if (btn.id && btn.id.includes('refresh')) return;
+
+            // Give A1111 a tick to finish swapping the tab, then hit refresh.
+            setTimeout(() => {
+                const refreshBtn =
+                    document.getElementById(`${prefix}_checkpoints_extra_refresh`) ||
+                    document.getElementById(`${prefix}_extra_refresh`);
+                if (refreshBtn) refreshBtn.click();
+            }, 80);
+        });
+    });
 }
 
 function addOnClickToButtons() {
@@ -524,7 +566,7 @@ function modelInfoPopUp(modelName=null, content_type=null, no_message=false) {
             left: '0',
             width: '100%',
             height: '100%',
-            backgroundColor: 'rgba(20, 20, 20, 0.95)',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',   // was rgba(20,20,20,0.95)
             zIndex: '1001',
             overflowY: 'auto'
         });
@@ -540,7 +582,7 @@ function modelInfoPopUp(modelName=null, content_type=null, no_message=false) {
             right: '22px',
             top: '0',
             cursor: 'pointer',
-            color: 'white',
+            color: 'black',
             fontSize: '32pt'
         });
         closeButton.classList.add('civitai-overlay-close');
@@ -548,26 +590,28 @@ function modelInfoPopUp(modelName=null, content_type=null, no_message=false) {
         closeButton.addEventListener('click', hidePopup);
 
         const inner = createElementWithStyle('div', {
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            width: 'auto',
-            transform: 'translate(-50%, -50%)',
-            background: 'var(--neutral-950)',
-            padding: '2em',
-            borderRadius: 'var(--block-radius)',
-            borderStyle: 'solid',
-            borderWidth: 'var(--block-border-width)',
-            borderColor: 'var(--block-border-color)',
-            zIndex: '1001'
-        });
-        inner.classList.add('civitai-overlay-inner');
+			position: 'absolute',
+			top: '50%',
+			left: '50%',
+			width: 'auto',
+			transform: 'translate(-50%, -50%)',
+			background: '#ffffff',              // was var(--neutral-950)
+			color: '#111111',                   // ensure dark text on white
+			padding: '2em',
+			borderRadius: 'var(--block-radius)',
+			borderStyle: 'solid',
+			borderWidth: 'var(--block-border-width)',
+			borderColor: 'var(--block-border-color)',
+			zIndex: '1001'
+		});
+		inner.classList.add('civitai-overlay-inner');
+		inner.id = 'civitai_preview_html';       // <-- key: activate scoped CSS
         
         var modelInfo;
         if (!no_message) {
             modelInfo = createElementWithStyle('div', {
                 fontSize: '24px',
-                color: 'white',
+                color: 'black',
                 fontFamily: 'var(--font)'
             });
             modelInfo.classList.add('civitai-overlay-text');
@@ -1201,6 +1245,7 @@ function onPageLoad() {
 
     addOnClickToButtons();
     createCivitAICardButtons();
+	setupExtraTabRefresh();      // <-- add this
     adjustFilterBoxAndButtons();
     setupClickOutsideListener();
     updateBackToTopVisibility([{isIntersecting: false}]);
