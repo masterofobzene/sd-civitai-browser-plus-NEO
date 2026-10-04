@@ -1150,7 +1150,7 @@ def request_civit_api(api_url=None, skip_error_check=False):
     return data
 
 def api_error_msg(input_string):
-    div = '<div style="color: white; font-family: var(--font); font-size: 24px; text-align: center; margin: 50px !important;">'
+    div = '<div style="color: black; font-family: var(--font); font-size: 24px; text-align: center; margin: 50px !important;">'
     if input_string == "not_found":
         return div + "Model ID not found on CivitAI.<br>Maybe the model doesn\'t exist on CivitAI?</div>"
     elif input_string == "path_not_found":
