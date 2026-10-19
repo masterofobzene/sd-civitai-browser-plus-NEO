@@ -1,4 +1,5 @@
 ### Extension for [Forge Neo](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
+See my other extension: [Preset-manager-neo](https://github.com/masterofobzene/preset-manager-neo)
 
 <h1>Features 🚀</h1>
 <h3>Browse all models from CivitAI ${\color{red}RED}$🔴</h3>
