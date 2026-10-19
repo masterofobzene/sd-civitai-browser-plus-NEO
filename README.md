@@ -1,5 +1,6 @@
-### Extension for [Forge Neo](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
-See my other extension: [Preset-manager-neo](https://github.com/masterofobzene/preset-manager-neo)
+## Civitai-Browser-plus-NEO 🔴
+An extension to browse and download civitai.red with aria2c integration for faster downloads.
+
 
 <h1>Features 🚀</h1>
 <h3>Browse all models from CivitAI ${\color{red}RED}$🔴</h3>
@@ -36,6 +37,7 @@ See my other extension: [Preset-manager-neo](https://github.com/masterofobzene/p
 <h1></h1>
 
 <details>
+  
 <summary><h1>Known Issues 🐛</h1></summary>
 
 <h3>Unable to download / Frozen download:</h3>
@@ -56,6 +58,13 @@ This will switch back to the old download method, which may resolve the issue.
 These settings can be found under the "Settings" tab in Web-UI and then under the "CivitAI Browser+" tile.
 
 </details>
+
+---------------------------------------------------
+
+See my other extension: 
+### [🔸Preset-manager-neo🔸](https://github.com/masterofobzene/preset-manager-neo)
+Saves all your settings as snapshots that you can restore at any time.
+
 
 <h1></h1>
 
