@@ -393,6 +393,68 @@ function createAccordion(containerDiv, subfolders, name, id_name) {
     containerDiv.appendChild(accordionContainer);
 }
 
+// Copy-path button on model cards.
+// Delegated on the document so it keeps working after cards are re-rendered
+// (tab switches, refreshes, searches). Set to true to copy only the folder.
+const CIVITAI_COPY_FOLDER_ONLY = false;
+
+function civitaiFindCardPath(btn) {
+    const attrs = ['data-clipboard-text', 'data-filename', 'data-path', 'data-sort-path'];
+    let el = btn;
+    while (el && el !== document.body) {
+        for (const a of attrs) {
+            const v = el.getAttribute && el.getAttribute(a);
+            if (v && /[\\/]/.test(v)) return v;
+        }
+        // stop once we've checked the card itself
+        if (el.classList && el.classList.contains('card')) break;
+        el = el.parentElement;
+    }
+    return null;
+}
+
+function civitaiCopyText(text) {
+    let ok = false;
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.top = '0';
+        ta.style.left = '-9999px';
+        ta.setAttribute('readonly', '');
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+    } catch (_) {}
+    if (!ok && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => {});
+    }
+}
+
+function setupCopyPathDelegation() {
+    if (window.__civitaiCopyPathSetup) return;
+    window.__civitaiCopyPathSetup = true;
+
+    // capture:true so we run before the app's own handler
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest ? e.target.closest('.copy-path-button') : null;
+        if (!btn) return;
+
+        let path = civitaiFindCardPath(btn);
+        // Nothing found: leave the app's native handler alone
+        if (!path) return;
+
+        e.stopImmediatePropagation();
+        e.preventDefault();
+
+        if (CIVITAI_COPY_FOLDER_ONLY) {
+            path = path.replace(/[\\/][^\\/]*$/, '') || path;
+        }
+        civitaiCopyText(path);
+    }, true);
+}
+
 // Adds a button to the cards in txt2img and img2img
 function createCivitAICardButtons() {
     const copyButton = document.querySelector('.copy-path-button');
@@ -420,46 +482,6 @@ function createCivitAICardButtons() {
                 buttonRow.addEventListener('click', function(event) {
                     event.stopPropagation();
                 });
-                const copyPathBtn = cardDiv.querySelector('.copy-path-button');
-				if (copyPathBtn && !copyPathBtn.dataset.civitaiPatched) {
-					copyPathBtn.dataset.civitaiPatched = "1";
-				
-					// capture:true + stopImmediatePropagation = block A1111 handler and card reload
-					copyPathBtn.addEventListener('click', (e) => {
-						e.stopImmediatePropagation();
-						e.preventDefault();
-				
-						// Walk up to find data-filename (A1111 puts it on .card or .actions)
-						let el = copyPathBtn, fullPath = null;
-						while (el && el !== document.body) {
-							if (el.dataset && el.dataset.filename) { fullPath = el.dataset.filename; break; }
-							el = el.parentElement;
-						}
-						if (!fullPath) fullPath = cardDiv.dataset && cardDiv.dataset.filename;
-						if (!fullPath) return;
-				
-						// Strip trailing "/filename" or "\filename"
-						const folder = fullPath.replace(/[\\/][^\\/]*$/, '') || fullPath;
-				
-						// Sync copy first (works with user gesture)
-						let ok = false;
-						try {
-							const ta = document.createElement('textarea');
-							ta.value = folder;
-							ta.style.position = 'fixed';
-							ta.style.top = '0';
-							ta.style.left = '-9999px';
-							ta.setAttribute('readonly', '');
-							document.body.appendChild(ta);
-							ta.select();
-							ok = document.execCommand('copy');
-							document.body.removeChild(ta);
-						} catch (_) {}
-						if (!ok && navigator.clipboard && navigator.clipboard.writeText) {
-							navigator.clipboard.writeText(folder).catch(() => {});
-						}
-					}, true);
-				}
                 if (!buttonRow.querySelector('.goto-civitbrowser.card-button')) {
                     const modelName = cardDiv.querySelector('.actions .name')?.textContent.trim();
                     if (!modelName) return;
@@ -1467,6 +1489,7 @@ function onPageLoad() {
     setupClickOutsideListener();
     updateBackToTopVisibility([{isIntersecting: false}]);
 	setupOpenFolderButtons();
+    setupCopyPathDelegation();
 }
 
 onUiLoaded(onPageLoad);
