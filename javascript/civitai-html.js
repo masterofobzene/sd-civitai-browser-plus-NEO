@@ -424,18 +424,40 @@ function createCivitAICardButtons() {
 				if (copyPathBtn && !copyPathBtn.dataset.civitaiPatched) {
 					copyPathBtn.dataset.civitaiPatched = "1";
 				
-					// Capture phase: stop card reload, but let A1111's own handler still fire.
+					// capture:true + stopImmediatePropagation = block A1111 handler and card reload
 					copyPathBtn.addEventListener('click', (e) => {
-						e.stopPropagation();
-						setTimeout(async () => {
-							try {
-								const text = await navigator.clipboard.readText();
-								const folder = text.replace(/[\\/][^\\/]*$/, '');
-								if (folder && folder !== text) {
-									await navigator.clipboard.writeText(folder);
-								}
-							} catch (_) { /* clipboard read blocked, fall through to Fix B */ }
-						}, 0);
+						e.stopImmediatePropagation();
+						e.preventDefault();
+				
+						// Walk up to find data-filename (A1111 puts it on .card or .actions)
+						let el = copyPathBtn, fullPath = null;
+						while (el && el !== document.body) {
+							if (el.dataset && el.dataset.filename) { fullPath = el.dataset.filename; break; }
+							el = el.parentElement;
+						}
+						if (!fullPath) fullPath = cardDiv.dataset && cardDiv.dataset.filename;
+						if (!fullPath) return;
+				
+						// Strip trailing "/filename" or "\filename"
+						const folder = fullPath.replace(/[\\/][^\\/]*$/, '') || fullPath;
+				
+						// Sync copy first (works with user gesture)
+						let ok = false;
+						try {
+							const ta = document.createElement('textarea');
+							ta.value = folder;
+							ta.style.position = 'fixed';
+							ta.style.top = '0';
+							ta.style.left = '-9999px';
+							ta.setAttribute('readonly', '');
+							document.body.appendChild(ta);
+							ta.select();
+							ok = document.execCommand('copy');
+							document.body.removeChild(ta);
+						} catch (_) {}
+						if (!ok && navigator.clipboard && navigator.clipboard.writeText) {
+							navigator.clipboard.writeText(folder).catch(() => {});
+						}
 					}, true);
 				}
                 if (!buttonRow.querySelector('.goto-civitbrowser.card-button')) {
@@ -476,6 +498,179 @@ function createSVGIcon(fontSize) {
     return svgIcon;
 }
 
+
+// Injects an "Open folder" button left of the extra-networks search box
+// (only on the Textual Inversion, Checkpoints and Lora tabs)
+function setupOpenFolderButtons() {
+    if (window.__civitaiOpenFolderSetup) return;
+    window.__civitaiOpenFolderSetup = true;
+
+    if (!document.getElementById("civitai-open-folder-style")) {
+        var st = document.createElement("style");
+        st.id = "civitai-open-folder-style";
+        st.textContent = `
+            .civitai-open-folder-btn {
+                flex: 0 0 auto;
+                align-self: center;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 30px;
+                min-width: 30px;
+                max-width: 30px;
+                height: 30px;
+                padding: 0;
+                margin: 0 6px 0 0;
+                font-size: 14px;
+                line-height: 1;
+                cursor: pointer;
+                color: var(--button-secondary-text-color, var(--body-text-color));
+                background: var(--button-secondary-background-fill, var(--background-fill-secondary));
+                border: 1px solid var(--button-secondary-border-color, var(--border-color-primary));
+                border-radius: var(--button-small-radius, var(--radius-md, 6px));
+                box-shadow: var(--button-shadow, none);
+                transition: background 0.15s ease, border-color 0.15s ease;
+            }
+            .civitai-open-folder-btn:hover {
+                background: var(--button-secondary-background-fill-hover, var(--background-fill-primary));
+                border-color: var(--button-secondary-border-color-hover, var(--border-color-accent, var(--border-color-primary)));
+            }
+            .civitai-open-folder-btn:active {
+                filter: brightness(0.92);
+            }
+        `.replace(/\n/g, "\r\n");
+        document.head.appendChild(st);
+    }
+
+    // Order matters: "textual" is checked before "lora" etc.
+    var kindMap = [
+        { match: /textual|embedding/i, kind: "textual_inversion", label: "textual inversion" },
+        { match: /checkpoint/i,        kind: "checkpoints",       label: "checkpoints" },
+        { match: /lora|lycoris|locon|dora/i, kind: "loras",       label: "lora" }
+    ];
+
+    function getKind(text) {
+        text = (text || "").trim();
+        for (var i = 0; i < kindMap.length; i++) {
+            if (kindMap[i].match.test(text)) return kindMap[i];
+        }
+        return null;
+    }
+
+    function isVisible(el) {
+        return !!(el && (el.offsetWidth || el.offsetHeight || el.getClientRects().length));
+    }
+
+    function makeButton(matched) {
+        var btn = document.createElement("button");
+        btn.className = "civitai-open-folder-btn";
+        btn.type = "button";
+        btn.textContent = "\uD83D\uDCC1";
+        btn.title = "Open " + matched.label + " folder";
+        btn.setAttribute("data-kind", matched.kind);
+        btn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            fetch("/civitai-browser/open-folder", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ kind: btn.getAttribute("data-kind") })
+            }).then(function (r) { console.log("[CivitAI] open-folder", btn.getAttribute("data-kind"), r.status); })
+              .catch(function (err) { console.error("[CivitAI] open-folder error", err); });
+        });
+        return btn;
+    }
+
+    function injectForContainer(prefix) {
+        var container = document.getElementById(prefix + "_extra_tabs");
+        if (!container) return;
+
+        // Find the currently selected tab button of the extra-networks tab bar
+        var selectedBtn = null;
+        var tabButtons = container.querySelectorAll("button");
+        for (var i = 0; i < tabButtons.length; i++) {
+            var b = tabButtons[i];
+            if (!isVisible(b)) continue;
+            if (b.classList.contains("selected") || b.getAttribute("aria-selected") === "true") {
+                // ignore non-tab buttons that happen to be "selected"
+                if (getKind(b.textContent) || /pages|hypernetwork|lyco|extra/i.test(b.textContent)) {
+                    selectedBtn = b;
+                    if (getKind(b.textContent)) break;
+                }
+            }
+        }
+        var matched = selectedBtn ? getKind(selectedBtn.textContent) : null;
+
+        // Remove stray buttons whose tab is no longer a supported one
+        var existing = container.querySelectorAll(".civitai-open-folder-btn");
+        for (var j = 0; j < existing.length; j++) {
+            var ex = existing[j];
+            if (!matched || ex.getAttribute("data-kind") !== matched.kind) {
+                // keep it only if it lives inside a hidden tab panel of its own kind (harmless), else drop
+                if (isVisible(ex)) ex.remove();
+            }
+        }
+        if (!matched) return;
+
+        // Find the visible search box of the active tab
+        var search = null;
+        var inputs = container.querySelectorAll("input, textarea");
+        for (var k = 0; k < inputs.length; k++) {
+            var el = inputs[k];
+            if (el.type === "hidden" || !isVisible(el)) continue;
+            var id = (el.id || "").toLowerCase();
+            var ph = (el.placeholder || "").toLowerCase();
+            if (id.indexOf("search") !== -1 || ph.indexOf("search") !== -1 ||
+                id.indexOf("filter") !== -1 || ph.indexOf("filter") !== -1 || el.type === "search") {
+                search = el;
+                break;
+            }
+        }
+        if (!search) return;
+
+        // Anchor = the element directly in the controls row that holds the search box
+        var anchor = search.closest("label") || search;
+        // climb until the parent is a flex/row container holding several children
+        var guard = 0;
+        while (anchor.parentElement && anchor.parentElement !== container && guard++ < 4) {
+            var p = anchor.parentElement;
+            if (p.id && /controls$/i.test(p.id)) break;
+            if (p.classList.contains("extra-network-controls") || p.classList.contains("extra-network-control")) break;
+            if (p.children.length > 1) break;
+            anchor = p;
+        }
+        var parent = anchor.parentElement;
+        if (!parent) return;
+
+        // Already there (and correct)? done.
+        var prev = anchor.previousElementSibling;
+        if (prev && prev.classList.contains("civitai-open-folder-btn") &&
+            prev.getAttribute("data-kind") === matched.kind) return;
+        var old = parent.querySelector(":scope > .civitai-open-folder-btn");
+        if (old) old.remove();
+
+        parent.insertBefore(makeButton(matched), anchor);
+        console.log("[CivitAI] open-folder button injected for", matched.kind, "on", prefix);
+    }
+
+    function run() {
+        try {
+            injectForContainer("txt2img");
+            injectForContainer("img2img");
+        } catch (err) {
+            console.error("[CivitAI] open-folder inject error", err);
+        }
+    }
+
+    run();
+    setInterval(run, 600);
+
+    document.addEventListener("click", function (e) {
+        var t = e.target && e.target.closest ? e.target.closest("[id$='_extra_tabs']") : null;
+        if (t) { setTimeout(run, 100); setTimeout(run, 400); }
+    }, true);
+}
+
 // Re-scan the extra-networks folder whenever the user switches tabs.
 function setupExtraTabRefresh() {
     ['txt2img', 'img2img'].forEach(prefix => {
@@ -483,21 +678,43 @@ function setupExtraTabRefresh() {
         if (!container || container.dataset.civitaiAutoRefresh) return;
         container.dataset.civitaiAutoRefresh = "1";
 
+        const getVisibleSearchBox = () => {
+            const inputs = container.querySelectorAll(
+                'input[id*="search" i], textarea[id*="search" i]'
+            );
+            for (const input of inputs) {
+                if (input.offsetParent !== null && input.type !== 'hidden') return input;
+            }
+            return null;
+        };
+
+        const reapplySearch = (text) => {
+            const box = getVisibleSearchBox();
+            if (!box) return;
+            if (text && box.value !== text) box.value = text;
+            if (box.value) box.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+
+        // capture:true → runs before A1111's tab-switch handler
         container.addEventListener('click', (e) => {
             const btn = e.target.closest('button');
             if (!btn) return;
-
-            // Don't re-fire when the user clicks the refresh button itself.
             if (btn.id && btn.id.includes('refresh')) return;
 
-            // Give A1111 a tick to finish swapping the tab, then hit refresh.
+            // Save text from the CURRENTLY visible tab before it swaps
+            const oldBox = getVisibleSearchBox();
+            const searchText = oldBox ? oldBox.value : '';
+
             setTimeout(() => {
                 const refreshBtn =
                     document.getElementById(`${prefix}_checkpoints_extra_refresh`) ||
                     document.getElementById(`${prefix}_extra_refresh`);
                 if (refreshBtn) refreshBtn.click();
-            }, 80);
-        });
+
+                // Restore + reapply after refresh re-renders the grid
+                setTimeout(() => reapplySearch(searchText), 100);
+            }, 100);
+        }, true);
     });
 }
 
@@ -1245,10 +1462,11 @@ function onPageLoad() {
 
     addOnClickToButtons();
     createCivitAICardButtons();
-	setupExtraTabRefresh();      // <-- add this
+	setupExtraTabRefresh();      
     adjustFilterBoxAndButtons();
     setupClickOutsideListener();
     updateBackToTopVisibility([{isIntersecting: false}]);
+	setupOpenFolderButtons();
 }
 
 onUiLoaded(onPageLoad);
