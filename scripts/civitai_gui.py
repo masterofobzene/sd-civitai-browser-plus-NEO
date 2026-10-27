@@ -12,6 +12,8 @@ import scripts.civitai_global as gl
 import scripts.civitai_download as _download
 import scripts.civitai_file_manage as _file
 import scripts.civitai_api as _api
+import subprocess, platform
+from fastapi import Request
 
 def git_tag():
     try:
@@ -1356,3 +1358,56 @@ def on_ui_settings():
     
 script_callbacks.on_ui_tabs(on_ui_tabs)
 script_callbacks.on_ui_settings(on_ui_settings)
+
+
+def _open_folder(kind: str):
+    mapping = {
+        "checkpoints":       "Checkpoint",
+        "loras":             "LORA",
+        "textual_inversion": "TextualInversion",
+    }
+    ct = mapping.get(kind)
+    path = None
+
+    # 1) the extension's own folder lookup
+    if ct:
+        try:
+            path = _api.contenttype_folder(ct)
+        except Exception as e:
+            print(f"open-folder: contenttype_folder failed for {kind}: {e}")
+
+    # 2) fallback: the app's configured model paths
+    if not path or not os.path.isdir(path):
+        try:
+            from modules import paths as _paths
+            fallback = {
+                "checkpoints":       getattr(cmd_opts, "ckpt_dir", None) or os.path.join(_paths.models_path, "Stable-diffusion"),
+                "loras":             getattr(cmd_opts, "lora_dir", None) or os.path.join(_paths.models_path, "Lora"),
+                "textual_inversion": getattr(cmd_opts, "embeddings_dir", None) or os.path.join(_paths.data_path, "embeddings"),
+            }
+            path = fallback.get(kind)
+        except Exception as e:
+            print(f"open-folder: fallback failed for {kind}: {e}")
+
+    if not path or not os.path.isdir(path):
+        return {"ok": False, "error": f"folder not found for {kind}"}
+
+    try:
+        if platform.system() == "Windows":
+            os.startfile(os.path.normpath(path))
+        elif platform.system() == "Darwin":
+            subprocess.Popen(["open", path])
+        else:
+            subprocess.Popen(["xdg-open", path])
+    except Exception as e:
+        return {"ok": False, "error": str(e), "path": path}
+    return {"ok": True, "path": path}
+
+async def _open_folder_route(request: Request):
+    data = await request.json()
+    return _open_folder(data.get("kind"))
+
+def _register_open_folder(demo, app):
+    app.add_api_route("/civitai-browser/open-folder", _open_folder_route, methods=["POST"])
+
+script_callbacks.on_app_started(_register_open_folder)
